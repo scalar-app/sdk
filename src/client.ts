@@ -6,11 +6,18 @@ import { request } from './http.js';
 import {
   CreateSpaceInputSchema,
   CreateTaskInputSchema,
+  CommandActionResultSchema,
+  CommandRequestSchema,
+  CommandResponseSchema,
+  CommandThreadDetailSchema,
+  CommandActionSchema,
+  CommandThreadListSchema,
   ConnectIntegrationResponseSchema,
   EventListSchema,
   HealthSchema,
   ListEventsQuerySchema,
   ListIntegrationsResponseSchema,
+  ListCommandThreadsQuerySchema,
   ListSpacesQuerySchema,
   ListTasksQuerySchema,
   ListWorkspacesResponseSchema,
@@ -28,6 +35,13 @@ import {
   VerifyMagicLinkResponseSchema,
 } from './schemas/index.js';
 import type {
+  CommandAction,
+  CommandActionResult,
+  CommandRequest,
+  CommandResponse,
+  CommandThread,
+  CommandThreadDetail,
+  ListCommandThreadsQuery,
   ConnectIntegrationResponse,
   CreateSpaceInput,
   CreateTaskInput,
@@ -72,6 +86,15 @@ export interface CallOptions {
 const EmptyOrOkSchema = z.union([z.undefined(), z.object({ ok: z.literal(true) })]);
 
 const prefix = `/api/${API_VERSION}`;
+
+/** The browser's zone where there is one, so answers use the reader's clock. */
+function resolveTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
 
 export function createScalarClient(options: ScalarClientOptions) {
   const globalFetch: FetchLike | undefined =
@@ -339,6 +362,82 @@ export function createScalarClient(options: ScalarClientOptions) {
           EmptyOrOkSchema,
         );
       },
+    },
+
+    /**
+     * Scalar Command.
+     *
+     * `ask` returns an answer plus any proposed actions. A proposal has not happened: when
+     * `stopReason` is `needs_approval`, show each action's `summary` and call `approve` or `reject`.
+     * Nothing in the workspace changes until `approve` resolves with an action status of `executed`.
+     *
+     * These endpoints return 503 `AI_UNAVAILABLE` on a server with no model key configured.
+     */
+    command: {
+      ask: (input: CommandRequest, call?: CallOptions): Promise<CommandResponse> =>
+        request(
+          http,
+          {
+            method: 'POST',
+            path: `${prefix}/command`,
+            body: {
+              ...input,
+              timeZone: input.timeZone ?? resolveTimeZone(),
+            },
+            bodySchema: CommandRequestSchema,
+            signal: call?.signal,
+          },
+          CommandResponseSchema,
+        ),
+
+      listThreads: (
+        query: ListCommandThreadsQuery = {},
+        call?: CallOptions,
+      ): Promise<Paginated<CommandThread>> =>
+        request(
+          http,
+          {
+            method: 'GET',
+            path: `${prefix}/command/threads`,
+            query: ListCommandThreadsQuerySchema.parse(query),
+            signal: call?.signal,
+          },
+          CommandThreadListSchema,
+        ),
+
+      getThread: (id: string, call?: CallOptions): Promise<CommandThreadDetail> =>
+        request(
+          http,
+          {
+            method: 'GET',
+            path: `${prefix}/command/threads/${encodeURIComponent(id)}`,
+            signal: call?.signal,
+          },
+          CommandThreadDetailSchema,
+        ),
+
+      /** Executes a proposed action. This is the only call that changes anything. */
+      approve: (id: string, call?: CallOptions): Promise<CommandActionResult> =>
+        request(
+          http,
+          {
+            method: 'POST',
+            path: `${prefix}/command/actions/${encodeURIComponent(id)}/approve`,
+            signal: call?.signal,
+          },
+          CommandActionResultSchema,
+        ),
+
+      reject: (id: string, call?: CallOptions): Promise<CommandAction> =>
+        request(
+          http,
+          {
+            method: 'POST',
+            path: `${prefix}/command/actions/${encodeURIComponent(id)}/reject`,
+            signal: call?.signal,
+          },
+          CommandActionSchema,
+        ),
     },
 
     today: {

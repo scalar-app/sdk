@@ -44,6 +44,27 @@ const today = await scalar.today.get({ tz: 'America/New_York' });
 
 Client surface: `health.get`, `auth.requestMagicLink / verifyMagicLink / logout`, `me.get`, `workspaces.list`, `spaces.list / create / get / update / delete`, `tasks.list / create / get / update / delete`, `events.list`, `today.get`, `integrations.list / connectGoogle / sync / disconnect`. Every method accepts a trailing `{ signal }` for cancellation.
 
+## Scalar Command
+
+```ts
+const turn = await client.command.ask({ message: 'block two hours for the problem set tomorrow' });
+
+if (turn.stopReason === 'needs_approval') {
+  for (const proposal of turn.actions) {
+    // proposal.summary is written for a person to read. Show it and wait.
+    const decision = await confirm(proposal.summary);
+    if (decision) await client.command.approve(proposal.id);
+    else await client.command.reject(proposal.id);
+  }
+}
+```
+
+A proposal has not happened. `ask` never changes anything: read tools run server side to answer the question, and anything that would write comes back as a pending action. `approve` is the only call that makes a change, and it returns the action with a status of `executed` or `failed`.
+
+`ask` fills in the browser time zone when you do not pass one, so answers use the reader's clock.
+
+On a server with no model key these methods raise `ScalarApiError` with status 503 and code `AI_UNAVAILABLE`. Treat that as "hide the feature", not as an outage.
+
 ## Errors
 
 Non-2xx responses throw `ScalarApiError` with `status`, `code` (for example `TASK_NOT_FOUND`), `message` and `requestId` (from the `x-request-id` header). A 2xx body that does not match the contract throws `ScalarApiError` with code `INVALID_RESPONSE`. Failures before any HTTP response (offline, CORS, abort) throw `ScalarNetworkError`. Use `isScalarApiError` and `isScalarNetworkError` to narrow.
@@ -62,7 +83,7 @@ The API repository ([scalar-app/api](https://github.com/scalar-app/api)) owns th
 
 ## Status
 
-Auth (magic link), me, workspaces, spaces, tasks, events (read), today, integrations (Google Calendar connect, status, sync, disconnect). Not yet: inbox, notifications, search, AI command, streaming helpers.
+Auth (magic link), me, workspaces, spaces, tasks, events (read), today, integrations (Google Calendar connect, status, sync, disconnect), command (ask, threads, approve, reject). Not yet: inbox, notifications, search, streaming helpers.
 
 ## Contributing
 
