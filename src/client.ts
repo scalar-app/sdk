@@ -6,9 +6,11 @@ import { request } from './http.js';
 import {
   CreateSpaceInputSchema,
   CreateTaskInputSchema,
+  ConnectIntegrationResponseSchema,
   EventListSchema,
   HealthSchema,
   ListEventsQuerySchema,
+  ListIntegrationsResponseSchema,
   ListSpacesQuerySchema,
   ListTasksQuerySchema,
   ListWorkspacesResponseSchema,
@@ -26,10 +28,13 @@ import {
   VerifyMagicLinkResponseSchema,
 } from './schemas/index.js';
 import type {
+  ConnectIntegrationResponse,
   CreateSpaceInput,
   CreateTaskInput,
+  DisconnectData,
   Event,
   Health,
+  IntegrationAccount,
   ListEventsQuery,
   ListSpacesQuery,
   ListTasksQuery,
@@ -288,6 +293,52 @@ export function createScalarClient(options: ScalarClientOptions) {
           },
           EventListSchema,
         ),
+    },
+
+    integrations: {
+      list: async (call?: CallOptions): Promise<IntegrationAccount[]> => {
+        const res = await request(
+          http,
+          { method: 'GET', path: `${prefix}/integrations`, signal: call?.signal },
+          ListIntegrationsResponseSchema,
+        );
+        return res.data;
+      },
+      /** Returns the provider consent URL. Send the browser there to start the connection. */
+      connectGoogle: (call?: CallOptions): Promise<ConnectIntegrationResponse> =>
+        request(
+          http,
+          { method: 'POST', path: `${prefix}/integrations/google/connect`, signal: call?.signal },
+          ConnectIntegrationResponseSchema,
+        ),
+      /** Queues a sync. Returns once accepted; progress shows up in `list()`. */
+      sync: async (id: string, call?: CallOptions): Promise<void> => {
+        await request(
+          http,
+          {
+            method: 'POST',
+            path: `${prefix}/integrations/${encodeURIComponent(id)}/sync`,
+            signal: call?.signal,
+          },
+          EmptyOrOkSchema,
+        );
+      },
+      disconnect: async (
+        id: string,
+        options: { data?: DisconnectData } = {},
+        call?: CallOptions,
+      ): Promise<void> => {
+        await request(
+          http,
+          {
+            method: 'DELETE',
+            path: `${prefix}/integrations/${encodeURIComponent(id)}`,
+            query: { data: options.data ?? 'keep' },
+            signal: call?.signal,
+          },
+          EmptyOrOkSchema,
+        );
+      },
     },
 
     today: {

@@ -42,7 +42,7 @@ const everything = await collectAll((cursor) => scalar.tasks.list({ cursor }));
 const today = await scalar.today.get({ tz: 'America/New_York' });
 ```
 
-Client surface: `health.get`, `auth.requestMagicLink / verifyMagicLink / logout`, `me.get`, `workspaces.list`, `spaces.list / create / get / update / delete`, `tasks.list / create / get / update / delete`, `events.list`, `today.get`. Every method accepts a trailing `{ signal }` for cancellation.
+Client surface: `health.get`, `auth.requestMagicLink / verifyMagicLink / logout`, `me.get`, `workspaces.list`, `spaces.list / create / get / update / delete`, `tasks.list / create / get / update / delete`, `events.list`, `today.get`, `integrations.list / connectGoogle / sync / disconnect`. Every method accepts a trailing `{ signal }` for cancellation.
 
 ## Errors
 
@@ -62,7 +62,7 @@ The API repository ([scalar-app/api](https://github.com/scalar-app/api)) owns th
 
 ## Status
 
-Stage 1: auth (magic link), me, workspaces, spaces, tasks, events (read), today. Not yet: inbox, integrations, notifications, search, AI command, streaming helpers.
+Auth (magic link), me, workspaces, spaces, tasks, events (read), today, integrations (Google Calendar connect, status, sync, disconnect). Not yet: inbox, notifications, search, AI command, streaming helpers.
 
 ## Contributing
 
