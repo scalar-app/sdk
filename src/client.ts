@@ -67,7 +67,7 @@ import type {
 } from './schemas/index.js';
 
 export interface ScalarClientOptions {
-  /** Origin of the API, for example `https://api.scalar.app` or `http://localhost:4000`. */
+  /** Origin of your Scalar API, for example `http://localhost:4000`. Scalar is self-hosted. */
   baseUrl: string;
   /** Custom fetch implementation. Defaults to the global `fetch`. */
   fetch?: FetchLike;
