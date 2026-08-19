@@ -4,24 +4,51 @@ import { API_VERSION } from './constants.js';
 import type { FetchLike, HttpOptions } from './http.js';
 import { request } from './http.js';
 import {
+  CreateProjectInputSchema,
   CreateSpaceInputSchema,
   CreateTaskInputSchema,
+  AiStatusSchema,
   CommandActionResultSchema,
   CommandRequestSchema,
   CommandResponseSchema,
   CommandThreadDetailSchema,
   CommandActionSchema,
   CommandThreadListSchema,
+  ConnectCanvasInputSchema,
+  ConnectCanvasResponseSchema,
   ConnectIntegrationResponseSchema,
   EventListSchema,
+  DiagnosticsSchema,
   HealthSchema,
+  HomeQuerySchema,
+  HomeSchema,
+  InboxDecisionResultSchema,
+  InboxListSchema,
   ListEventsQuerySchema,
   ListIntegrationsResponseSchema,
   ListCommandThreadsQuerySchema,
+  ListFocusQuerySchema,
+  ListInboxQuerySchema,
+  ListProjectsQuerySchema,
   ListSpacesQuerySchema,
   ListTasksQuerySchema,
   ListWorkspacesResponseSchema,
+  AcceptSuggestionInputSchema,
+  ApplyPlanInputSchema,
+  ApplyPlanResultSchema,
+  CompleteFocusInputSchema,
+  CompleteFocusResultSchema,
+  CurrentFocusSchema,
+  DismissSuggestionInputSchema,
+  FocusSessionListSchema,
+  FocusSessionSchema,
   MeResponseSchema,
+  PlanPreviewSchema,
+  StartFocusInputSchema,
+  PreferencesSchema,
+  PreviewPlanInputSchema,
+  ProjectListSchema,
+  ProjectSchema,
   RequestMagicLinkInputSchema,
   SearchQuerySchema,
   SearchResultsSchema,
@@ -30,13 +57,21 @@ import {
   SpaceSchema,
   TaskListSchema,
   TaskSchema,
+  TimelineQuerySchema,
+  TimelineRangeQuerySchema,
+  TimelineRangeSchema,
+  TimelineSchema,
   TodayQuerySchema,
   TodayResponseSchema,
+  UpdatePreferencesInputSchema,
+  UpdateProjectInputSchema,
   UpdateSpaceInputSchema,
   UpdateTaskInputSchema,
   VerifyMagicLinkResponseSchema,
 } from './schemas/index.js';
 import type {
+  AiStatus,
+  Diagnostics,
   CommandAction,
   CommandActionResult,
   CommandRequest,
@@ -44,25 +79,52 @@ import type {
   CommandThread,
   CommandThreadDetail,
   ListCommandThreadsQuery,
+  ConnectCanvasInput,
   ConnectIntegrationResponse,
+  CreateProjectInput,
   CreateSpaceInput,
   CreateTaskInput,
   DisconnectData,
   Event,
   Health,
+  Home,
+  HomeQuery,
+  InboxDecisionResult,
+  InboxItem,
   IntegrationAccount,
   ListEventsQuery,
+  ListFocusQuery,
+  ListInboxQuery,
+  ListProjectsQuery,
   ListSpacesQuery,
   ListTasksQuery,
+  AcceptSuggestionInput,
+  ApplyPlanInput,
+  ApplyPlanResult,
+  CompleteFocusInput,
+  CompleteFocusResult,
+  DismissSuggestionInput,
+  FocusSession,
   Paginated,
+  PlanPreview,
+  Preferences,
+  PreviewPlanInput,
+  StartFocusInput,
+  Project,
   RequestMagicLinkInput,
   RequestMagicLinkResponse,
   SearchQuery,
   SearchResults,
   Space,
   Task,
+  Timeline,
+  TimelineQuery,
+  TimelineRange,
+  TimelineRangeQuery,
   TodayQuery,
   TodayResponse,
+  UpdatePreferencesInput,
+  UpdateProjectInput,
   UpdateSpaceInput,
   UpdateTaskInput,
   User,
@@ -126,6 +188,16 @@ export function createScalarClient(options: ScalarClientOptions) {
       credentials: http.credentials,
       apiVersion: API_VERSION,
     } as const,
+
+    /** How this installation is doing, component by component. Needs a session. */
+    diagnostics: {
+      get: (call?: CallOptions): Promise<Diagnostics> =>
+        request(
+          http,
+          { method: 'GET', path: `${prefix}/diagnostics`, signal: call?.signal },
+          DiagnosticsSchema,
+        ),
+    },
 
     health: {
       get: (call?: CallOptions): Promise<Health> =>
@@ -249,6 +321,233 @@ export function createScalarClient(options: ScalarClientOptions) {
       },
     },
 
+    projects: {
+      list: (query: ListProjectsQuery = {}, call?: CallOptions): Promise<Paginated<Project>> =>
+        request(
+          http,
+          {
+            method: 'GET',
+            path: `${prefix}/projects`,
+            query: ListProjectsQuerySchema.parse(query),
+            signal: call?.signal,
+          },
+          ProjectListSchema,
+        ),
+      create: (input: CreateProjectInput, call?: CallOptions): Promise<Project> =>
+        request(
+          http,
+          {
+            method: 'POST',
+            path: `${prefix}/projects`,
+            body: input,
+            bodySchema: CreateProjectInputSchema,
+            signal: call?.signal,
+          },
+          ProjectSchema,
+        ),
+      get: (id: string, call?: CallOptions): Promise<Project> =>
+        request(
+          http,
+          {
+            method: 'GET',
+            path: `${prefix}/projects/${encodeURIComponent(id)}`,
+            signal: call?.signal,
+          },
+          ProjectSchema,
+        ),
+      update: (id: string, input: UpdateProjectInput, call?: CallOptions): Promise<Project> =>
+        request(
+          http,
+          {
+            method: 'PATCH',
+            path: `${prefix}/projects/${encodeURIComponent(id)}`,
+            body: input,
+            bodySchema: UpdateProjectInputSchema,
+            signal: call?.signal,
+          },
+          ProjectSchema,
+        ),
+      delete: async (id: string, call?: CallOptions): Promise<void> => {
+        await request(
+          http,
+          {
+            method: 'DELETE',
+            path: `${prefix}/projects/${encodeURIComponent(id)}`,
+            signal: call?.signal,
+          },
+          EmptyOrOkSchema,
+        );
+      },
+    },
+
+    inbox: {
+      /** Unfiled work with whatever is proposed about it, in one call. */
+      list: (query: ListInboxQuery = {}, call?: CallOptions): Promise<Paginated<InboxItem>> =>
+        request(
+          http,
+          {
+            method: 'GET',
+            path: `${prefix}/inbox`,
+            query: ListInboxQuerySchema.parse(query),
+            signal: call?.signal,
+          },
+          InboxListSchema,
+        ),
+      /** Applies the values (possibly edited) and files the item out of the inbox. */
+      accept: (
+        taskId: string,
+        input: AcceptSuggestionInput,
+        call?: CallOptions,
+      ): Promise<InboxDecisionResult> =>
+        request(
+          http,
+          {
+            method: 'POST',
+            path: `${prefix}/inbox/${encodeURIComponent(taskId)}/accept`,
+            body: input,
+            bodySchema: AcceptSuggestionInputSchema,
+            signal: call?.signal,
+          },
+          InboxDecisionResultSchema,
+        ),
+      /** Turns down the proposal. The item stays in the inbox. */
+      dismiss: (
+        taskId: string,
+        input: DismissSuggestionInput = {},
+        call?: CallOptions,
+      ): Promise<InboxDecisionResult> =>
+        request(
+          http,
+          {
+            method: 'POST',
+            path: `${prefix}/inbox/${encodeURIComponent(taskId)}/dismiss`,
+            body: input,
+            bodySchema: DismissSuggestionInputSchema,
+            signal: call?.signal,
+          },
+          InboxDecisionResultSchema,
+        ),
+    },
+
+    focus: {
+      /** The running session, or null. No session is a normal state rather than an error. */
+      current: async (call?: CallOptions): Promise<FocusSession | null> => {
+        const res = await request(
+          http,
+          { method: 'GET', path: `${prefix}/focus/current`, signal: call?.signal },
+          CurrentFocusSchema,
+        );
+        return res.session;
+      },
+      start: (input: StartFocusInput, call?: CallOptions): Promise<FocusSession> =>
+        request(
+          http,
+          {
+            method: 'POST',
+            path: `${prefix}/focus/start`,
+            body: input,
+            bodySchema: StartFocusInputSchema,
+            signal: call?.signal,
+          },
+          FocusSessionSchema,
+        ),
+      complete: (
+        id: string,
+        input: CompleteFocusInput = {},
+        call?: CallOptions,
+      ): Promise<CompleteFocusResult> =>
+        request(
+          http,
+          {
+            method: 'POST',
+            path: `${prefix}/focus/${encodeURIComponent(id)}/complete`,
+            body: input,
+            bodySchema: CompleteFocusInputSchema,
+            signal: call?.signal,
+          },
+          CompleteFocusResultSchema,
+        ),
+      /** Ends a session without recording it as work done. */
+      cancel: (id: string, call?: CallOptions): Promise<FocusSession> =>
+        request(
+          http,
+          {
+            method: 'POST',
+            path: `${prefix}/focus/${encodeURIComponent(id)}/cancel`,
+            signal: call?.signal,
+          },
+          FocusSessionSchema,
+        ),
+      sessions: (
+        query: ListFocusQuery = {},
+        call?: CallOptions,
+      ): Promise<Paginated<FocusSession>> =>
+        request(
+          http,
+          {
+            method: 'GET',
+            path: `${prefix}/focus/sessions`,
+            query: ListFocusQuerySchema.parse(query),
+            signal: call?.signal,
+          },
+          FocusSessionListSchema,
+        ),
+    },
+
+    planner: {
+      /** Works out a plan and returns it. Writes nothing. */
+      preview: (input: PreviewPlanInput = {}, call?: CallOptions): Promise<PlanPreview> =>
+        request(
+          http,
+          {
+            method: 'POST',
+            path: `${prefix}/planner/preview`,
+            body: { tz: resolveTimeZone(), ...input },
+            bodySchema: PreviewPlanInputSchema,
+            signal: call?.signal,
+          },
+          PlanPreviewSchema,
+        ),
+      /**
+       * Writes an approved plan, whole or not at all. Send back the blocks that were approved,
+       * having dropped or adjusted any of them. Throws `PLAN_STALE` (409) when the day changed
+       * underneath the preview.
+       */
+      apply: (input: ApplyPlanInput, call?: CallOptions): Promise<ApplyPlanResult> =>
+        request(
+          http,
+          {
+            method: 'POST',
+            path: `${prefix}/planner/apply`,
+            body: input,
+            bodySchema: ApplyPlanInputSchema,
+            signal: call?.signal,
+          },
+          ApplyPlanResultSchema,
+        ),
+    },
+
+    preferences: {
+      get: (call?: CallOptions): Promise<Preferences> =>
+        request(
+          http,
+          { method: 'GET', path: `${prefix}/preferences`, signal: call?.signal },
+          PreferencesSchema,
+        ),
+      update: (input: UpdatePreferencesInput, call?: CallOptions): Promise<Preferences> =>
+        request(
+          http,
+          {
+            method: 'PATCH',
+            path: `${prefix}/preferences`,
+            body: input,
+            bodySchema: UpdatePreferencesInputSchema,
+            signal: call?.signal,
+          },
+          PreferencesSchema,
+        ),
+    },
+
     tasks: {
       list: (query: ListTasksQuery = {}, call?: CallOptions): Promise<Paginated<Task>> =>
         request(
@@ -323,6 +622,25 @@ export function createScalarClient(options: ScalarClientOptions) {
     },
 
     integrations: {
+      /**
+       * Connects Canvas with a personal access token. The token is sent once and is never
+       * returned by any endpoint afterwards.
+       */
+      connectCanvas: async (input: ConnectCanvasInput, call?: CallOptions): Promise<string> => {
+        const res = await request(
+          http,
+          {
+            method: 'POST',
+            path: `${prefix}/integrations/canvas/connect`,
+            body: input,
+            bodySchema: ConnectCanvasInputSchema,
+            signal: call?.signal,
+          },
+          ConnectCanvasResponseSchema,
+        );
+        return res.id;
+      },
+
       list: async (call?: CallOptions): Promise<IntegrationAccount[]> => {
         const res = await request(
           http,
@@ -378,6 +696,13 @@ export function createScalarClient(options: ScalarClientOptions) {
      * These endpoints return 503 `AI_UNAVAILABLE` on a server with no model key configured.
      */
     command: {
+      /** Never fails when nothing is configured: "no provider" is an answer, not an error. */
+      status: (call?: CallOptions): Promise<AiStatus> =>
+        request(
+          http,
+          { method: 'GET', path: `${prefix}/command/status`, signal: call?.signal },
+          AiStatusSchema,
+        ),
       ask: (input: CommandRequest, call?: CallOptions): Promise<CommandResponse> =>
         request(
           http,
@@ -462,6 +787,61 @@ export function createScalarClient(options: ScalarClientOptions) {
           },
           SearchResultsSchema,
         ),
+    },
+
+    home: {
+      /**
+       * Everything Home needs in one request: what to do next, and what needs a decision. Computed
+       * deterministically on the server, so this is never a slow or surprising call.
+       */
+      get: (query: HomeQuery = {}, call?: CallOptions): Promise<Home> => {
+        const parsed = HomeQuerySchema.parse(query);
+        return request(
+          http,
+          {
+            method: 'GET',
+            path: `${prefix}/home`,
+            query: { ...parsed, tz: parsed.tz ?? resolveTimeZone() },
+            signal: call?.signal,
+          },
+          HomeSchema,
+        );
+      },
+    },
+
+    timeline: {
+      /** A span of days in one request, for a week view. */
+      range: (query: TimelineRangeQuery, call?: CallOptions): Promise<TimelineRange> => {
+        const parsed = TimelineRangeQuerySchema.parse(query);
+        return request(
+          http,
+          {
+            method: 'GET',
+            path: `${prefix}/timeline/range`,
+            query: { ...parsed, tz: parsed.tz ?? resolveTimeZone() },
+            signal: call?.signal,
+          },
+          TimelineRangeSchema,
+        );
+      },
+
+      /**
+       * The day as one sequence. `tz` defaults to the reader's own zone, because a timeline in
+       * UTC is the wrong day for almost everybody.
+       */
+      get: (query: TimelineQuery = {}, call?: CallOptions): Promise<Timeline> => {
+        const parsed = TimelineQuerySchema.parse(query);
+        return request(
+          http,
+          {
+            method: 'GET',
+            path: `${prefix}/timeline`,
+            query: { ...parsed, tz: parsed.tz ?? resolveTimeZone() },
+            signal: call?.signal,
+          },
+          TimelineSchema,
+        );
+      },
     },
 
     today: {
