@@ -83,7 +83,7 @@ The API repository ([scalar-app/api](https://github.com/scalar-app/api)) owns th
 
 ## Status
 
-Auth (magic link), me, workspaces, spaces, tasks, events (read), today, integrations (Google Calendar connect, status, sync, disconnect), command (ask, threads, approve, reject). Not yet: inbox, notifications, search, streaming helpers.
+Auth (magic link), me, workspaces, spaces, tasks, events (read), today, integrations (Google Calendar connect, status, sync, disconnect), command (ask, threads, approve, reject), search (tasks, events and spaces in one call). Not yet: inbox, notifications, search, streaming helpers.
 
 ## Contributing
 

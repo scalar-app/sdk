@@ -7,3 +7,4 @@ export * from './event.js';
 export * from './today.js';
 export * from './integration.js';
 export * from './command.js';
+export * from './search.js';

@@ -23,6 +23,8 @@ import {
   ListWorkspacesResponseSchema,
   MeResponseSchema,
   RequestMagicLinkInputSchema,
+  SearchQuerySchema,
+  SearchResultsSchema,
   RequestMagicLinkResponseSchema,
   SpaceListSchema,
   SpaceSchema,
@@ -55,6 +57,8 @@ import type {
   Paginated,
   RequestMagicLinkInput,
   RequestMagicLinkResponse,
+  SearchQuery,
+  SearchResults,
   Space,
   Task,
   TodayQuery,
@@ -437,6 +441,26 @@ export function createScalarClient(options: ScalarClientOptions) {
             signal: call?.signal,
           },
           CommandActionSchema,
+        ),
+    },
+
+    /**
+     * Search across tasks, events and spaces in one request.
+     *
+     * Substring matching, not ranked full text, so treat the order as recency rather than
+     * relevance. `counts` describes what came back, which is capped per kind by `limit`.
+     */
+    search: {
+      query: (input: SearchQuery, call?: CallOptions): Promise<SearchResults> =>
+        request(
+          http,
+          {
+            method: 'GET',
+            path: `${prefix}/search`,
+            query: SearchQuerySchema.parse(input),
+            signal: call?.signal,
+          },
+          SearchResultsSchema,
         ),
     },
 
