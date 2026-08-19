@@ -97,3 +97,13 @@ export const ListCommandThreadsQuerySchema = PaginationQuerySchema;
 export type ListCommandThreadsQuery = z.infer<typeof ListCommandThreadsQuerySchema>;
 
 export const CommandThreadListSchema = PaginatedSchema(CommandThreadSchema);
+
+/**
+ * Which model vendor this installation talks to, if any. Read only: the provider is server
+ * configuration, and a self hoster sets it in their environment rather than in a web form.
+ */
+export const AiStatusSchema = z.object({
+  configured: z.boolean(),
+  provider: z.string().nullable(),
+});
+export type AiStatus = z.infer<typeof AiStatusSchema>;
