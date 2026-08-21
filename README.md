@@ -42,7 +42,11 @@ const everything = await collectAll((cursor) => scalar.tasks.list({ cursor }));
 const today = await scalar.today.get({ tz: 'America/New_York' });
 ```
 
-Client surface: `health.get`, `auth.requestMagicLink / verifyMagicLink / logout`, `me.get`, `workspaces.list`, `spaces.list / create / get / update / delete`, `tasks.list / create / get / update / delete`, `events.list`, `today.get`, `integrations.list / connectGoogle / sync / disconnect`. Every method accepts a trailing `{ signal }` for cancellation.
+Client surface, one namespace per line:
+
+`health.get`, `diagnostics.get`, `auth.requestMagicLink / verifyMagicLink / logout`, `me.get / context`, `workspaces.list`, `spaces.list / create / get / update / delete`, `projects.list / create / get / update / delete`, `tasks.list / create / get / update / delete`, `events.list`, `inbox.list / accept / dismiss`, `focus.current / start / complete / cancel / sessions`, `planner.preview / apply`, `preferences.get / update`, `today.get`, `home.get`, `timeline.get / range`, `search.query`, `command.status / ask / listThreads / getThread / approve / reject`, `integrations.list / connectGoogle / connectCanvas / sync / disconnect`.
+
+Every method accepts a trailing `{ signal }` for cancellation.
 
 ## Scalar Command
 
@@ -83,7 +87,7 @@ The API repository ([scalar-app/api](https://github.com/scalar-app/api)) owns th
 
 ## Status
 
-Auth (magic link), me, workspaces, spaces, tasks, events (read), today, integrations (Google Calendar connect, status, sync, disconnect), command (ask, threads, approve, reject), search (tasks, events and spaces in one call). Not yet: inbox, notifications, search, streaming helpers.
+Every endpoint the API exposes has a method here, apart from the Google OAuth callback, which is a browser redirect rather than something a client calls. Not yet: notifications and streaming helpers.
 
 ## Contributing
 
