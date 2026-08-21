@@ -24,17 +24,35 @@ export const ProjectSchema = z.object({
 });
 export type Project = z.infer<typeof ProjectSchema>;
 
-export const CreateProjectInputSchema = z.object({
-  name: z.string().min(1).max(200),
+function datesAreOrdered(value: {
+  startAt?: string | null | undefined;
+  dueAt?: string | null | undefined;
+}): boolean {
+  if (!value.startAt || !value.dueAt) return true;
+  return new Date(value.startAt) <= new Date(value.dueAt);
+}
+
+const DATE_ORDER_MESSAGE = 'dueAt must not be before startAt.';
+
+const projectInputFields = z.object({
+  name: z.string().trim().min(1).max(200),
   description: z.string().max(20000).nullable().optional(),
   spaceId: IdSchema.nullable().optional(),
   status: ProjectStatusSchema.optional(),
   startAt: IsoDateTimeSchema.nullable().optional(),
   dueAt: IsoDateTimeSchema.nullable().optional(),
 });
+
+export const CreateProjectInputSchema = projectInputFields.refine(datesAreOrdered, {
+  message: DATE_ORDER_MESSAGE,
+  path: ['dueAt'],
+});
 export type CreateProjectInput = z.infer<typeof CreateProjectInputSchema>;
 
-export const UpdateProjectInputSchema = CreateProjectInputSchema.partial();
+export const UpdateProjectInputSchema = projectInputFields
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, { message: 'At least one field is required.' })
+  .refine(datesAreOrdered, { message: DATE_ORDER_MESSAGE, path: ['dueAt'] });
 export type UpdateProjectInput = z.infer<typeof UpdateProjectInputSchema>;
 
 export const ListProjectsQuerySchema = PaginationQuerySchema.extend({

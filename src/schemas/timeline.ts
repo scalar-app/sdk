@@ -53,11 +53,13 @@ export const TimelineSchema = z.object({
 export type Timeline = z.infer<typeof TimelineSchema>;
 
 /** A span of days: what the calendar week view asks for. */
-export const TimelineRangeQuerySchema = z.object({
-  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  tz: z.string().optional(),
-});
+export const TimelineRangeQuerySchema = z
+  .object({
+    from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'from must be YYYY-MM-DD'),
+    to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'to must be YYYY-MM-DD'),
+    tz: z.string().min(1).max(64).optional(),
+  })
+  .refine((value) => value.to >= value.from, { message: 'to must not be before from.' });
 export type TimelineRangeQuery = z.infer<typeof TimelineRangeQuerySchema>;
 
 export const TimelineDaySchema = z.object({

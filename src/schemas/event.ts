@@ -22,6 +22,9 @@ export type Event = z.infer<typeof EventSchema>;
 export const ListEventsQuerySchema = PaginationQuerySchema.extend({
   from: IsoDateTimeSchema,
   to: IsoDateTimeSchema,
+}).refine((value) => new Date(value.from) < new Date(value.to), {
+  message: 'to must be after from.',
+  path: ['to'],
 });
 export type ListEventsQuery = z.infer<typeof ListEventsQuerySchema>;
 

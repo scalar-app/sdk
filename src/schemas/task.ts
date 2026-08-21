@@ -46,8 +46,18 @@ export const TaskSchema = z.object({
 });
 export type Task = z.infer<typeof TaskSchema>;
 
-export const CreateTaskInputSchema = z.object({
-  title: z.string().min(1).max(500),
+function scheduleIsOrdered(value: {
+  scheduledStart?: string | null | undefined;
+  scheduledEnd?: string | null | undefined;
+}): boolean {
+  if (!value.scheduledStart || !value.scheduledEnd) return true;
+  return new Date(value.scheduledStart) < new Date(value.scheduledEnd);
+}
+
+const SCHEDULE_ORDER_MESSAGE = 'scheduledEnd must be after scheduledStart.';
+
+const taskInputFields = z.object({
+  title: z.string().trim().min(1).max(500),
   description: z.string().max(20000).nullable().optional(),
   spaceId: IdSchema.nullable().optional(),
   projectId: IdSchema.nullable().optional(),
@@ -56,12 +66,20 @@ export const CreateTaskInputSchema = z.object({
   dueAt: IsoDateTimeSchema.nullable().optional(),
   scheduledStart: IsoDateTimeSchema.nullable().optional(),
   scheduledEnd: IsoDateTimeSchema.nullable().optional(),
-  estimatedMinutes: z.number().int().nonnegative().nullable().optional(),
+  estimatedMinutes: z.number().int().min(0).max(100_000).nullable().optional(),
   parentTaskId: IdSchema.nullable().optional(),
+});
+
+export const CreateTaskInputSchema = taskInputFields.refine(scheduleIsOrdered, {
+  message: SCHEDULE_ORDER_MESSAGE,
+  path: ['scheduledEnd'],
 });
 export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>;
 
-export const UpdateTaskInputSchema = CreateTaskInputSchema.partial();
+export const UpdateTaskInputSchema = taskInputFields
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, { message: 'At least one field is required.' })
+  .refine(scheduleIsOrdered, { message: SCHEDULE_ORDER_MESSAGE, path: ['scheduledEnd'] });
 export type UpdateTaskInput = z.infer<typeof UpdateTaskInputSchema>;
 
 export const ListTasksQuerySchema = PaginationQuerySchema.extend({
@@ -70,7 +88,7 @@ export const ListTasksQuerySchema = PaginationQuerySchema.extend({
   projectId: IdSchema.optional(),
   dueBefore: IsoDateTimeSchema.optional(),
   dueAfter: IsoDateTimeSchema.optional(),
-  q: z.string().optional(),
+  q: z.string().trim().min(1).max(200).optional(),
 });
 export type ListTasksQuery = z.infer<typeof ListTasksQuerySchema>;
 

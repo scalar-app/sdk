@@ -84,7 +84,9 @@ describe('createScalarClient', () => {
   });
 
   it('honours a custom credentials mode', async () => {
-    const { fetchImpl, calls } = mockFetch(() => jsonResponse({ user: user() }));
+    const { fetchImpl, calls } = mockFetch(() =>
+      jsonResponse({ user: user(), workspace: workspace() }),
+    );
     const client = createScalarClient({ baseUrl, fetch: fetchImpl, credentials: 'same-origin' });
 
     await client.me.get();
@@ -93,7 +95,7 @@ describe('createScalarClient', () => {
   });
 
   it('parses and unwraps successful responses', async () => {
-    const { fetchImpl } = mockFetch(() => jsonResponse({ user: user() }));
+    const { fetchImpl } = mockFetch(() => jsonResponse({ user: user(), workspace: workspace() }));
     const client = createScalarClient({ baseUrl, fetch: fetchImpl });
 
     const me = await client.me.get();
@@ -226,6 +228,8 @@ function workspace() {
     id: 'ws_1',
     name: 'Personal',
     ownerId: 'user_1',
+    kind: 'personal' as const,
+    role: 'owner' as const,
     createdAt: '2026-08-18T10:00:00.000Z',
     updatedAt: '2026-08-18T10:00:00.000Z',
   };

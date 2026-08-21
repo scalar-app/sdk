@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const IsoDateTimeSchema = z.iso.datetime({ offset: true });
 export const IdSchema = z.string().min(1);
-export const EmailSchema = z.email();
+export const EmailSchema = z.email().trim().toLowerCase().max(254);
 /** Calendar date in YYYY-MM-DD form. */
 export const CalendarDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD');
 
@@ -31,5 +31,18 @@ export const ApiErrorSchema = z.object({
 });
 export type ApiError = z.infer<typeof ApiErrorSchema>;
 
-export const HealthSchema = z.object({ status: z.literal('ok') });
+export const HealthCheckStatusSchema = z.enum(['ok', 'error']);
+export type HealthCheckStatus = z.infer<typeof HealthCheckStatusSchema>;
+
+/** The 503 body: which dependency is down, not just that one is. */
+export const DegradedHealthSchema = z.object({
+  status: z.literal('degraded'),
+  checks: z.object({
+    database: HealthCheckStatusSchema,
+    redis: HealthCheckStatusSchema,
+  }),
+});
+export type DegradedHealth = z.infer<typeof DegradedHealthSchema>;
+
+export const HealthSchema = z.union([z.object({ status: z.literal('ok') }), DegradedHealthSchema]);
 export type Health = z.infer<typeof HealthSchema>;
