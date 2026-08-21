@@ -13,7 +13,7 @@ export const SuggestionValuesSchema = z.object({
   projectId: IdSchema.nullable().optional(),
   priority: TaskPrioritySchema.optional(),
   dueAt: IsoDateTimeSchema.nullable().optional(),
-  estimatedMinutes: z.number().int().positive().nullable().optional(),
+  estimatedMinutes: z.number().int().min(1).max(100_000).nullable().optional(),
   scheduledStart: IsoDateTimeSchema.nullable().optional(),
   scheduledEnd: IsoDateTimeSchema.nullable().optional(),
 });
@@ -40,7 +40,7 @@ export const InboxItemSchema = z.object({
 export type InboxItem = z.infer<typeof InboxItemSchema>;
 
 export const ListInboxQuerySchema = PaginationQuerySchema.extend({
-  tz: z.string().optional(),
+  tz: z.string().min(1).max(64).optional(),
 });
 export type ListInboxQuery = z.infer<typeof ListInboxQuerySchema>;
 

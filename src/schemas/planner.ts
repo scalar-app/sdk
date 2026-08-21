@@ -75,11 +75,14 @@ export const PlanPreviewSchema = z.object({
 });
 export type PlanPreview = z.infer<typeof PlanPreviewSchema>;
 
+/** The most tasks one plan may cover. Mirrors MAX_PLAN_TASKS in the API. */
+export const MAX_PLAN_TASKS = 100;
+
 export const PreviewPlanInputSchema = z.object({
-  tz: z.string().optional(),
+  tz: z.string().min(1).max(64).optional(),
   rangeStart: IsoDateTimeSchema.optional(),
   rangeEnd: IsoDateTimeSchema.optional(),
-  taskIds: z.array(IdSchema).min(1).optional(),
+  taskIds: z.array(IdSchema).min(1).max(MAX_PLAN_TASKS).optional(),
 });
 export type PreviewPlanInput = z.infer<typeof PreviewPlanInputSchema>;
 
@@ -96,7 +99,14 @@ export const ApplyPlanInputSchema = z.object({
         endAt: IsoDateTimeSchema,
       }),
     )
-    .min(1),
+    .min(1)
+    .max(MAX_PLAN_TASKS)
+    .refine((blocks) => blocks.every((block) => new Date(block.endAt) > new Date(block.startAt)), {
+      message: 'Each block must end after it starts.',
+    })
+    .refine((blocks) => new Set(blocks.map((block) => block.taskId)).size === blocks.length, {
+      message: 'Each task may appear only once.',
+    }),
 });
 export type ApplyPlanInput = z.infer<typeof ApplyPlanInputSchema>;
 

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { API_VERSION } from './constants.js';
+import { ScalarApiError } from './errors.js';
 import type { FetchLike, HttpOptions } from './http.js';
 import { request } from './http.js';
 import {
@@ -18,6 +19,7 @@ import {
   ConnectCanvasResponseSchema,
   ConnectIntegrationResponseSchema,
   EventListSchema,
+  DegradedHealthSchema,
   DiagnosticsSchema,
   HealthSchema,
   HomeQuerySchema,
@@ -98,6 +100,7 @@ import type {
   ListProjectsQuery,
   ListSpacesQuery,
   ListTasksQuery,
+  MeResponse,
   AcceptSuggestionInput,
   ApplyPlanInput,
   ApplyPlanResult,
@@ -200,8 +203,25 @@ export function createScalarClient(options: ScalarClientOptions) {
     },
 
     health: {
-      get: (call?: CallOptions): Promise<Health> =>
-        request(http, { method: 'GET', path: '/health', signal: call?.signal }, HealthSchema),
+      /**
+       * Returns rather than throws when the server is degraded: a health check that throws on the
+       * one answer worth acting on is not much of a health check. Every other failure still throws.
+       */
+      get: async (call?: CallOptions): Promise<Health> => {
+        try {
+          return await request(
+            http,
+            { method: 'GET', path: '/health', signal: call?.signal },
+            HealthSchema,
+          );
+        } catch (error) {
+          if (error instanceof ScalarApiError && error.status === 503) {
+            const degraded = DegradedHealthSchema.safeParse(error.details);
+            if (degraded.success) return degraded.data;
+          }
+          throw error;
+        }
+      },
     },
 
     auth: {
@@ -249,6 +269,17 @@ export function createScalarClient(options: ScalarClientOptions) {
         );
         return res.user;
       },
+
+      /**
+       * The user and the workspace the session is scoped to. `/me` returns both; `get` narrows to
+       * the user, which is all most callers want.
+       */
+      context: (call?: CallOptions): Promise<MeResponse> =>
+        request(
+          http,
+          { method: 'GET', path: `${prefix}/me`, signal: call?.signal },
+          MeResponseSchema,
+        ),
     },
 
     workspaces: {
@@ -845,17 +876,20 @@ export function createScalarClient(options: ScalarClientOptions) {
     },
 
     today: {
-      get: (query: TodayQuery = {}, call?: CallOptions): Promise<TodayResponse> =>
-        request(
+      /** `tz` defaults to the reader's own zone, as it does for home and timeline. */
+      get: (query: TodayQuery = {}, call?: CallOptions): Promise<TodayResponse> => {
+        const parsed = TodayQuerySchema.parse(query);
+        return request(
           http,
           {
             method: 'GET',
             path: `${prefix}/today`,
-            query: TodayQuerySchema.parse(query),
+            query: { ...parsed, tz: parsed.tz ?? resolveTimeZone() },
             signal: call?.signal,
           },
           TodayResponseSchema,
-        ),
+        );
+      },
     },
   };
 }

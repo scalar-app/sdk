@@ -27,15 +27,38 @@ export const PreferencesSchema = z.object({
 });
 export type Preferences = z.infer<typeof PreferencesSchema>;
 
-export const UpdatePreferencesInputSchema = z.object({
-  timeZone: z.string().min(1).max(100).optional(),
-  weekStartsOn: z.number().int().min(1).max(7).optional(),
-  workdayStartMinute: z.number().int().min(0).max(1439).optional(),
-  workdayEndMinute: z.number().int().min(1).max(1440).optional(),
-  workDays: z.array(z.number().int().min(1).max(7)).min(1).max(7).optional(),
-  defaultFocusMinutes: z.number().int().min(5).max(480).optional(),
-  minimumBufferMinutes: z.number().int().min(0).max(120).optional(),
-  autoSchedule: AutoScheduleModeSchema.optional(),
-  durationLearningEnabled: z.boolean().optional(),
-});
+const TimeZoneSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .refine((value) => {
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: value });
+      return true;
+    } catch {
+      return false;
+    }
+  }, 'Must be a valid IANA time zone.');
+
+/** ISO weekdays, 1 is Monday. Sorted and deduplicated so the sent value has one shape. */
+const WorkDaysSchema = z
+  .array(z.number().int().min(1).max(7))
+  .min(1)
+  .max(7)
+  .transform((days) => [...new Set(days)].sort((a, b) => a - b));
+
+export const UpdatePreferencesInputSchema = z
+  .object({
+    timeZone: TimeZoneSchema.optional(),
+    weekStartsOn: z.number().int().min(1).max(7).optional(),
+    workdayStartMinute: z.number().int().min(0).max(1439).optional(),
+    workdayEndMinute: z.number().int().min(1).max(1440).optional(),
+    workDays: WorkDaysSchema.optional(),
+    defaultFocusMinutes: z.number().int().min(5).max(480).optional(),
+    minimumBufferMinutes: z.number().int().min(0).max(120).optional(),
+    autoSchedule: AutoScheduleModeSchema.optional(),
+    durationLearningEnabled: z.boolean().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, { message: 'At least one field is required.' });
 export type UpdatePreferencesInput = z.infer<typeof UpdatePreferencesInputSchema>;

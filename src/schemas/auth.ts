@@ -37,5 +37,6 @@ export type LogoutResponse = z.infer<typeof LogoutResponseSchema>;
 
 export const MeResponseSchema = z.object({
   user: UserSchema,
+  workspace: WorkspaceSchema,
 });
 export type MeResponse = z.infer<typeof MeResponseSchema>;
